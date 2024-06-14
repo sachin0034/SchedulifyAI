@@ -100,6 +100,6 @@ Contributions are welcome! Please open an issue or submit a pull request for any
 
 If you have any questions or need further assistance, feel free to contact:
 
-- **Email**: your-email@example.com
-- **GitHub**: [your-username](https://github.com/your-username)
+- **Email**: sachinparmar98134@gmail.com
+- **GitHub**: [your-username](https://github.com/sachin0034)
 
