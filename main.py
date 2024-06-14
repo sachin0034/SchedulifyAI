@@ -149,7 +149,7 @@ st.title('Call Dashboard')
 
 # Sidebar
 st.sidebar.title('Navigation')
-options = ['Single Call', 'Call Logs', 'Show Meeting', 'Transcript']
+options = ['Single Call', 'Show Meeting', 'Transcript']
 choice = st.sidebar.selectbox('Select a section', options)
 
 # Single Call Section
