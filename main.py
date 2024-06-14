@@ -23,7 +23,6 @@ openApi = os.getenv('OPENAI_API_KEY')
 # Google Calendar API setup
 SCOPES = [os.getenv('GOOGLE_SCOPES')]
 
-
 client = OpenAI(api_key=openApi)
 
 def get_calendar_service():
@@ -46,8 +45,7 @@ def get_calendar_service():
 
     return build('calendar', 'v3', credentials=creds)
 
-
-def create_event(name, date, time):
+def create_event(name, date, time, email):
     service = get_calendar_service()
     start_datetime = f'{date[:4]}-{date[4:6]}-{date[6:8]}T{time}:00'
     end_datetime = f'{date[:4]}-{date[4:6]}-{date[6:8]}T{int(time[:2]) + 1}:{time[3:]}:00'
@@ -63,7 +61,7 @@ def create_event(name, date, time):
             'timeZone': 'America/New_York',
         },
         'attendees': [
-            {'email': 'sachinparmar0246@gmail.com'},
+            {'email': email},
         ],
     }
 
@@ -75,7 +73,7 @@ def create_event(name, date, time):
         return None
 
 # Function to make a call
-def make_call(phone_number, prompt):
+def make_call(phone_number, user_prompt):
     headers = {
         'Authorization': f'Bearer {auth_token}',
         'Content-Type': 'application/json',
@@ -83,14 +81,14 @@ def make_call(phone_number, prompt):
 
     data = {
         'assistant': {
-            "firstMessage": prompt,
+            "firstMessage": "hello",
             "model": {
                 "provider": "openai",
                 "model": "gpt-4-turbo",
                 "messages": [
                     {
                         "role": "system",
-                        "content": "You are an AI interviewer assistant. Your task is to schedule an interview for TechAvtar. Ask a few questions to the user like their name, and when they will be available for the interview, including date and time."
+                        "content": user_prompt
                     }
                 ]
             },
@@ -138,7 +136,7 @@ def extract_info_from_transcript(transcript):
     response = client.chat.completions.create(
         model="gpt-4-turbo-preview",
         messages=[
-            {"role": "system", "content": "Extract the name, date (in YYYY/MM/DD format), and time (in 24-hour format) from the following transcript of an interview scheduling call. Provide the information in this exact format: Name: [Name], Date: [YYYYMMDD], Time: [HH:MM]"},
+            {"role": "system", "content": "Extract the name, date (in YYYY/MM/DD format), time (in 24-hour format), and email from the following transcript of an interview scheduling call. Provide the information in this exact format: Name: [Name], Date: [YYYYMMDD], Time: [HH:MM], Email: [email@example.com]"},
             {"role": "user", "content": transcript}
         ]
     )
@@ -156,9 +154,9 @@ choice = st.sidebar.selectbox('Select a section', options)
 if choice == 'Single Call':
     st.header('Single Call')
     phone_number = st.text_input('Enter phone number (with country code)')
-    prompt = st.text_area('Enter the prompt for the call')
+    user_prompt = st.text_area('Enter the prompt for the call')
     if st.button('Make Call'):
-        message, response = make_call(phone_number, prompt)
+        message, response = make_call(phone_number, user_prompt)
         st.write(message)
         st.json(response)
         if 'id' in response:
@@ -195,13 +193,15 @@ elif choice == 'Show Meeting':
                 name = info_parts[0].split(': ')[1]
                 date = info_parts[1].split(': ')[1]
                 time = info_parts[2].split(': ')[1]
+                email = info_parts[3].split(': ')[1]
                 
                 st.write(f"Parsed Name: {name}")
                 st.write(f"Parsed Date (YYYYMMDD): {date}")
                 st.write(f"Parsed Time (24-hour): {time}")
+                st.write(f"Email : {email}")
                 
                 # Schedule the meeting in Google Calendar
-                event_link = create_event(name, date, time)
+                event_link = create_event(name, date, time, email)
                 if event_link:
                     st.write(f"Meeting scheduled! View it here: {event_link}")
                 else:
