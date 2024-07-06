@@ -1,4 +1,4 @@
-# Call Dashboard Application
+# SchedulifyAI
 
 This project is a Streamlit-based application that allows users to manage and schedule calls using various APIs. The application includes features for making single calls, viewing call logs, showing meeting details, and fetching call transcripts. Additionally, it integrates with the Google Calendar API to schedule events.
 
