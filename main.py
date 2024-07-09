@@ -9,6 +9,8 @@ import os
 import logging
 import datetime
 from dotenv import load_dotenv
+import streamlit.components.v1 as components
+from twilio.rest import Client
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,10 +22,15 @@ auth_token = os.getenv('AUTH_TOKEN')
 phone_number_id = os.getenv('PHONE_NUMBER_ID')
 openApi = os.getenv('OPENAI_API_KEY')
 
+# Your Twilio account SID and Auth Token
+twilio_account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+twilio_auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+
 # Google Calendar API setup
 SCOPES = [os.getenv('GOOGLE_SCOPES')]
 
 client = OpenAI(api_key=openApi)
+twilio_client = Client(twilio_account_sid, twilio_auth_token)
 
 def get_calendar_service():
     creds = None
@@ -54,11 +61,11 @@ def create_event(name, date, time, email):
         'summary': f'Interview with {name}',
         'start': {
             'dateTime': start_datetime,
-            'timeZone': 'America/New_York',
+            'timeZone': 'Asia/Kolkata',
         },
         'end': {
             'dateTime': end_datetime,
-            'timeZone': 'America/New_York',
+            'timeZone': 'Asia/Kolkata',
         },
         'attendees': [
             {'email': email},
@@ -84,7 +91,7 @@ def make_call(phone_number, user_prompt):
             "firstMessage": "hello",
             "model": {
                 "provider": "openai",
-                "model": "gpt-4-turbo",
+                "model": "gpt-3.5-turbo",
                 "messages": [
                     {
                         "role": "system",
@@ -107,17 +114,6 @@ def make_call(phone_number, user_prompt):
     else:
         return 'Failed to create call', response.text
 
-def fetch_call_logs():
-    url = "https://api.vapi.ai/calls"
-    headers = {
-        'Authorization': f'Bearer {auth_token}'
-    }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return None
-
 def fetch_transcript(call_id):
     url = f"https://api.vapi.ai/call/{call_id}"
     headers = {
@@ -134,7 +130,7 @@ def fetch_transcript(call_id):
 
 def extract_info_from_transcript(transcript):
     response = client.chat.completions.create(
-        model="gpt-4-turbo-preview",
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "Extract the name, date (in YYYY/MM/DD format), time (in 24-hour format), and email from the following transcript of an interview scheduling call. Provide the information in this exact format: Name: [Name], Date: [YYYYMMDD], Time: [HH:MM], Email: [email@example.com]"},
             {"role": "user", "content": transcript}
@@ -142,12 +138,32 @@ def extract_info_from_transcript(transcript):
     )
     return response.choices[0].message.content
 
+def fetch_twilio_call_logs():
+    try:
+        calls = twilio_client.calls.list(limit=20)  # Fetch the last 20 calls
+        call_logs = []
+        for call in calls:
+            call_log = {
+                "SID": call.sid,
+                "From": call.from_,
+                "To": call.to,
+                "Status": call.status,
+                "Start Time": call.start_time,
+                "End Time": call.end_time,
+                "Duration": call.duration
+            }
+            call_logs.append(call_log)
+        return call_logs
+    except Exception as e:
+        logging.error(f"Failed to fetch Twilio call logs: {e}")
+        return []
+
 # Streamlit App
 st.title('Call Dashboard')
 
 # Sidebar
 st.sidebar.title('Navigation')
-options = ['Single Call', 'Show Meeting', 'Transcript']
+options = ['Single Call', 'Show Meeting', 'Transcript', 'Google Calendar', 'Twilio Call Logs']
 choice = st.sidebar.selectbox('Select a section', options)
 
 # Single Call Section
@@ -161,22 +177,6 @@ if choice == 'Single Call':
         st.json(response)
         if 'id' in response:
             st.session_state['last_call_id'] = response['id']
-
-# Call Logs Section
-elif choice == 'Call Logs':
-    st.header('Call Logs')
-    call_logs = fetch_call_logs()
-
-    if call_logs:
-        for log in call_logs:
-            st.write(f"Call ID: {log['id']}")
-            st.write(f"Phone Number: {log['phoneNumber']}")
-            st.write(f"Status: {log['status']}")
-            st.write(f"Start Time: {log['startedAt']}")
-            st.write(f"End Time: {log['endedAt']}")
-            st.write("---")
-    else:
-        st.write("No call logs found or failed to fetch call logs.")
 
 elif choice == 'Show Meeting':
     st.header('Show Meeting')
@@ -216,3 +216,27 @@ elif choice == 'Transcript':
     if st.button('Fetch Transcript'):
         transcript = fetch_transcript(call_id)
         st.write(transcript)
+
+# Google Calendar Section
+elif choice == 'Google Calendar':
+    st.header('Google Calendar')
+    calendar_url = 'https://calendar.google.com/calendar/embed?src=sachinparmar0246%40gmail.com&ctz=Asia%2FKolkata'
+    components.iframe(calendar_url, width=800, height=600)
+
+# Twilio Call Logs Section
+elif choice == 'Twilio Call Logs':
+    st.header('Twilio Call Logs')
+    call_logs = fetch_twilio_call_logs()
+
+    if call_logs:
+        for log in call_logs:
+            st.write(f"Call SID: {log['SID']}")
+            st.write(f"From: {log['From']}")
+            st.write(f"To: {log['To']}")
+            st.write(f"Status: {log['Status']}")
+            st.write(f"Start Time: {log['Start Time']}")
+            st.write(f"End Time: {log['End Time']}")
+            st.write(f"Duration: {log['Duration']}")
+            st.write("---")
+    else:
+        st.write("No call logs found or failed to fetch call logs.")
