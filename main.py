@@ -23,8 +23,8 @@ phone_number_id = os.getenv('PHONE_NUMBER_ID')
 openApi = os.getenv('OPENAI_API_KEY')
 
 # Your Twilio account SID and Auth Token
-twilio_account_sid = os.getenv('TWILIO_ACCOUNT_SID')
-twilio_auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+twilio_account_sid = os.getenv('twilio_account_sid')
+twilio_auth_token = os.getenv('twilio_auth_token')
 
 # Google Calendar API setup
 SCOPES = [os.getenv('GOOGLE_SCOPES')]
